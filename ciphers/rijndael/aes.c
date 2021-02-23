@@ -3,6 +3,7 @@
 * only implements encryption
 */
 
+#include <printf.h>
 #include <string.h>
 
 #include "aes.h"
@@ -187,7 +188,6 @@ void KeyAddition(uint32_t state[], const uint32_t round_key[]) {
 /******************************************
  *             AES CRYPTO API             * 
  ******************************************/
-#include <stdio.h>
 /* 
  * Creates key schedule from a single 256 byte key
  * to be used in every round of encryption. In other
