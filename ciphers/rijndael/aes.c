@@ -1,27 +1,46 @@
-/* header
-* fips compliant?
-* only implements encryption
-*/
+/* 
+ * Author: Allen Aboytes 
+ * 
+ * Details: 
+ * An implementation of AES-256. The full specification (FIPS-197)
+ * created by NIST can be found here:
+ *   https://csrc.nist.gov/csrc/media/publications/fips/197/final/documents/fips-197.pdf
+ *
+ * This source is not necessarily FIPS-197 compliant as
+ * it only implements encryption. The intention is to use
+ * it for AES-256-GCM which only needs the encryption function
+ * due to the underlying counter mode of operation.
+ *
+ * This implementation does however, pass the test vectors
+ * in FIPS-197 for the AES-256 algorithm.
+ * 
+ * Disclaimer: 
+ * Source provided "as is" with no gaurentees. Created for
+ * eductational purposes.
+ */
 
 #include <stdio.h>
 #include <string.h>
 
 #include "aes.h"
 
-/* AES constants
- * Nb = 4 (numbe of 32-bit words in state)
-*/
+/* 
+ * AES-256 constants:
+ *  Nb = 4 (numbe of 32-bit words in state)
+ *  Nk = 8 (number of 32-bit words in key)
+ *  Nr = 14 (number of rounds in AES)
+ */
 /******************************************
  *          MACROS and CONSTANTS          * 
  ******************************************/
-#define BLK_BYTES 16  // block size in bytes
+#define BLK_BYTES 16  // block size in bytes (128/8)
 #define N_ROWS    4   // number of rows in state
 #define N_COLUMNS 4   // number of columns in state
-#define N_ROUNDS 14   // number of rounds in AES-256
+#define N_ROUNDS 14   // number of rounds in AES-256 (Nr)
 
 // AES state indexing functions
-#define MATRIX(s, r, c) (s[c][r])
-#define COLARR(col, r) ((uint8_t* ) &col)[r]
+#define MATRIX(s, r, c) (s[c][r]) // as a matrix, indexed by column
+#define COLARR(col, r) ((uint8_t* ) &col)[r] // as a column array
 
 // round constant words for key expansion
 static const uint32_t rcon[] = {
@@ -50,14 +69,21 @@ static const uint8_t s_box[16][16] = {
 	{0x8C,0xA1,0x89,0x0D,0xBF,0xE6,0x42,0x68,0x41,0x99,0x2D,0x0F,0xB0,0x54,0xBB,0x16}
 };
 
-// only indexes are 0x02 and 0x03 since we implement
-// encryptino only. For any other coefficeitns we would need
-// fully calculated tables. An alternative and more efficient
-// method is using algo-log tables (x2 256 tables)
+/* Only coefficeints 0x02 and 0x03 are used since we only 
+ * implement encryption. 0x02 is mapped to the first index, 
+ * and 0x03 to the second, hence the strange XOR 0x02 convention.
+ * It more luck really that it happened to work out that way.
+ * 
+ * If we would need more coefficients we could use larger 
+ * pre-computed tables. An alternative for a fast software
+ * implementation would be to use algo-log tables (x2 256 tables)
+ */
 #define GF_8(c, b) gf_8_mult[c ^ 0x02][b]
 
-// could use precomputed tables 
-/* first index refers to 0x02 and second refers to 0x03 */
+/* First index refers to the coefficients (0x02, 0x03). 0x02 is mapped
+ * to the first offset and 0x03 to the second. The second index refers
+ * to the byte we wish to multiply with.
+ */
 static const uint8_t gf_8_mult[2][256] = {
   /* multiplication by 0x02 */
   {0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C, 0x1E, 
@@ -100,25 +126,27 @@ static const uint8_t gf_8_mult[2][256] = {
 
 /********* Key Expansion Helper **********/
 
-// takes 4 byte input word and applies s-box to it
-// returns output word, does not modify input directly
+/* 
+ * Takes 4 byte input word and applies s-box transformation
+ * byte-by-byte. Returns an output word, and does not modify
+ * the input directly (in-place).
+ */
 uint32_t SubWord(uint32_t word) {
   uint32_t sub_word = word;
   uint8_t byte, *byte_arr = (uint8_t *) &sub_word;
-  // printf("SubWord: ");
   for (int i = 0; i < 4; i++) {
     byte = byte_arr[i];
-    // printf("%x:%x ", byte, s_box[byte >> 4][byte & 0xF]);
     byte_arr[i] = s_box[byte >> 4][byte & 0xF];
   }
-  // printf("\n");
   return sub_word;
 }
 
-// left cyclic permutation on single word
-// word is 32 bytes
-// byte rotated by 1
-uint32_t RotWord(uint32_t word) {
+/* 
+ * Left cyclic rotation/permutation or 32-bit word.
+ * Word is rotated by 1, which means a single byte 
+ * is rotated left.
+ */
+static inline uint32_t RotWord(uint32_t word) {
   return (word << 8) | (word >> 24);
 }
 
@@ -135,8 +163,11 @@ void SubBytes(uint8_t state [][4]) {
   }
 }
 
-// first row remains unchanged
-// only last three rows shifted
+/* 
+ * Left rotatation of rows in state. Essentially shifts
+ * values from different columns in the same row. First
+ * row remains unchanged. The shift amount depends on the row.
+ */
 void ShiftRows(uint8_t state [][4]) {
   uint8_t tmp[N_COLUMNS];
   // for row in state
@@ -152,6 +183,11 @@ void ShiftRows(uint8_t state [][4]) {
   }
 }
 
+/* 
+ * Transformation of columns in state by fixed polynimial (a)
+ * over GF(2^8). Matrix multiplication for each column (s) results
+ * in s' = s * a
+ */
 void MixColumns(uint32_t state[]) {
     uint32_t col;
     // for each column in state
@@ -174,13 +210,13 @@ void MixColumns(uint32_t state[]) {
 }
 
 
-/* adds a round key to the transfrmed state */
-// state interpreted as an array of columns (words)
-// round key interpretes as an array of 32-bit words
-// addition is done with XOR
+/* 
+ * Adds (XOR) a round key to the state over GF(2^8). The state is 
+ * interpreted as an array of columns (32-bit words) and the
+ * round key is interpreted as an array of 32-bit words.
+ */
 void KeyAddition(uint32_t state[], const uint32_t round_key[]) {  
   for (int c = 0; c < N_COLUMNS; c++) {
-    printf("\tstate: %x round: %x xor: %x\n", state[c], round_key[c], state[c] ^ round_key[c]);
     state[c] = state[c] ^ round_key[c];
   }
 }
@@ -191,53 +227,35 @@ void KeyAddition(uint32_t state[], const uint32_t round_key[]) {
 /* 
  * Creates key schedule from a single 256 byte key
  * to be used in every round of encryption. In other
- * words, generates round keys.
+ * words, generates round keys for AES-256.
  */
 void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   uint8_t i = 0, Nk = 8; // number of 32-bit words in cipher key (key length)
   uint32_t tmp = 0;
 
   do {
-    key_schedule[i] = //((uint32_t *) secret_key)[i];
-    ((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
+    key_schedule[i] = ((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
      | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
   } while(++i < Nk);
 
   do {
     tmp = key_schedule[i-1];
-    printf("i: %d tmp: %x ", i, tmp);
     if (i % Nk == 0) {
-      printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(RotWord(tmp)), rcon[i/Nk - 1]);
       tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk - 1];
-      printf("XOR: %x ", tmp);
     } else if (Nk > 6 && i % Nk == 4) {
       tmp = SubWord(tmp);
     }
-    printf("w[i-Nk]: %x ", key_schedule[i - Nk]);
     key_schedule[i] = key_schedule[i - Nk] ^ tmp;
-    printf("w[i]: %x\n", key_schedule[i]);
-      // ((uint8_t*)key_schedule + i)[0], ((uint8_t*)key_schedule + i)[1],
-      // ((uint8_t*)key_schedule + i)[2], ((uint8_t*)key_schedule + i)[3]);
   } while (++i < N_COLUMNS * (N_ROUNDS+1));
 
-  // reverse edianess for 32-bit words
+  // reverse endianess for 32-bit words
   for(i = 0; i < N_COLUMNS * (N_ROUNDS+1); i++) {
     uint8_t * k = (uint8_t *) &key_schedule[i];
     key_schedule[i] = (k[0] << 24) | (k[1] << 16) | (k[2] << 8) | k[3];
-    printf("w[%d]: %x\n", i, key_schedule[i]);
   }
 } 
 
-void print_state(uint8_t m[][4]) {
-  for (int c = 0; c < N_COLUMNS; c++) {
-    for (int r = 0; r < N_ROWS; r++) {
-      printf("%02x", MATRIX(m, r, c));
-    }
-  }
-  printf("\n");
-}
-
-// encrypts a single 128-bit block with key schedule
+/* Encrypts a single 128-bit block with pre-computed key schedule. */
 void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uint32_t key_schedule[]) {
   // AES state array
   union state {
@@ -251,17 +269,10 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
   KeyAddition(S.col_arr, key_schedule); // add round key
 
   for (int r = 1; r < N_ROUNDS; r++) {
-      printf("round[%02d].start\t", r);
-      print_state(S.matrix);
+    // single round of AES
     SubBytes(S.matrix);
-      printf("round[%02d].s_box\t", r);
-      print_state(S.matrix);
     ShiftRows(S.matrix);
-      printf("round[%02d].s_row\t", r);
-      print_state(S.matrix);
     MixColumns(S.col_arr);
-      printf("round[%02d].m_col\t", r);
-      print_state(S.matrix);
     KeyAddition(S.col_arr, key_schedule + (r * N_COLUMNS));
   }
 
@@ -270,8 +281,6 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
   ShiftRows(S.matrix);
   KeyAddition(S.col_arr, key_schedule + (N_ROUNDS * N_COLUMNS));
 
-  printf("round[%02d].start\t", N_ROUNDS);
-      print_state(S.matrix);
   //copy out bytes from state array
   memcpy(cipher_text, (uint8_t *) S.col_arr, BLK_BYTES);
 }

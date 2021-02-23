@@ -43,9 +43,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/*/%.c
 
 $(OBJ_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
-# tests/test_aes.o: tests/test_aes.c
-# 	$(CC) $(CFLAGS) -c $< -o $@
 	
 clean:
 	rm -rf $(BUILD_DIR)

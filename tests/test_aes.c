@@ -39,4 +39,16 @@ int main() {
     // encrypt 128-bit block
     uint8_t cipher_text[AES_BLK_SZ];
     aes_encryption(plain_text, cipher_text, key_schedule);
+
+    char * expected_ct = "8ea2b7ca516745bfeafc49904b496089";
+    size_t ct_len = strlen(expected_ct);
+    uint8_t out_ct[AES_BLK_SZ];
+    hex_to_bytes(expected_ct, out_ct, ct_len);
+
+    for(int i = 0; i < AES_BLK_SZ/8; i++) {
+        if (cipher_text[i] != out_ct[i]) {
+            return -1;
+        }
+    }
+    return 0;
 }
