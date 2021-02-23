@@ -106,7 +106,7 @@ uint32_t SubWord(uint32_t word) {
   uint32_t sub_word = word;
   uint8_t byte, *byte_arr = (uint8_t *) &sub_word;
   printf("SubWord: ");
-  for (int i = 0; i < N_ROUNDS; i++) {
+  for (int i = 0; i < 4; i++) {
     byte = byte_arr[i];
     printf("%x ", byte);
     byte_arr[i] = s_box[byte >> 4][byte & 0xF];
@@ -180,7 +180,7 @@ void MixColumns(uint32_t state[]) {
 // addition is done with XOR
 void KeyAddition(uint32_t state[], const uint32_t round_key[]) {  
   for (int c = 0; c < N_COLUMNS; c++) {
-    printf("state: %x round: %x xor: %x", state[c], round_key[c], state[c] ^ round_key[c]);
+    printf("state: %x round: %x xor: %x\n", state[c], round_key[c], state[c] ^ round_key[c]);
     state[c] = state[c] ^ round_key[c];
   }
 }
