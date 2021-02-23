@@ -104,10 +104,13 @@ static const uint8_t gf_8_mult[2][256] = {
 uint32_t SubWord(uint32_t word) {
   uint32_t sub_word = word;
   uint8_t byte, *byte_arr = (uint8_t *) &sub_word;
+  printf("SubWord: ");
   for (int i = 0; i < N_ROUNDS; i++) {
     byte = byte_arr[i];
+    printf("%x ", byte);
     byte_arr[i] = s_box[byte >> 4][byte & 0xF];
   }
+  printf("\n");
   return sub_word;
 }
 
@@ -195,8 +198,9 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   uint32_t tmp = 0;
 
   do {
-    key_schedule[i] = ((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
-      | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
+    key_schedule[i] = ((uint32_t *) secret_key)[i]
+    //((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
+    //  | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
   } while(++i < Nk);
 
   do {
