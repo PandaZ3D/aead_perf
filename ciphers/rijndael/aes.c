@@ -202,7 +202,7 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
     tmp = key_schedule[i-1];
     printf("i: %d tmp: %x ", i, tmp);
     if (i % Nk == 0) {
-      printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(tmp), rcon[i/Nk]);
+      printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(tmp), rcon[i/Nk - 1]);
       tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk - 1];
       printf("XOR: %x ", tmp);
     } else if (Nk > 6 && i % Nk == 4) {
@@ -216,8 +216,15 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   } while (++i < N_COLUMNS * (N_ROUNDS+1));
 } 
 
-// encrypts a single 128-bit block with key schedule
+void print_state(uint8_t m[][4]) {
+  for (int c = 0; c < N_COLUMNS; c++) {
+    for (int r = 0; r < N_ROWS; r++) {
+      printf("%x", MATRIX(m, r, c));
+    }
+  }
+}
 
+// encrypts a single 128-bit block with key schedule
 void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uint32_t key_schedule[]) {
   // AES state array
   union state {
@@ -231,6 +238,8 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
   KeyAddition(S.col_arr, key_schedule); // add round key
 
   for (int r = 1; r < N_ROUNDS; r++) {
+    printf("round[%02d]: ", r);
+    print_state(S.matrix);
     SubBytes(S.matrix);
     ShiftRows(S.matrix);
     MixColumns(S.col_arr);

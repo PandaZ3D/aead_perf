@@ -1,9 +1,13 @@
 /* 
  * Test Vectors from FIPS 197, 256-bit key
  */ 
+#include <string.h>
+
 #include "aes.h"
+#include "common.h"
 
 #define AES_KEY_SZ 256 // 256-bit key generates 14 rounds
+#define AES_BLK_SZ 128
 #define AES_256_NR 14
 #define AES_256_NB 8
 
@@ -16,6 +20,23 @@ int main() {
     uint32_t key_schedule[AES_256_NB * (AES_256_NR+1)];
     // uint32_t expected_rk[AES_256_NR];
 
-    // 
+    // example key for key schedule in FIPS 197 A.3
     aes_key_expansion(secret_key, key_schedule);
+
+    char * pt_str = "00112233445566778899aabbccddeeff";
+    char * key_str = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+
+    size_t ptlen = strlen(pt_str);
+    size_t keylen = strlen(key_str);
+
+    uint8_t plain_text[AES_BLK_SZ];
+
+    hex_to_bytes(key_str, secret_key, keylen);
+    hex_to_bytes(pt_str, plain_text, ptlen);
+
+    // generate round keys
+    aes_key_expansion(secret_key, key_schedule);
+    // encrypt 128-bit block
+    uint8_t cipher_text[AES_BLK_SZ];
+    aes_encryption(plain_text, cipher_text, key_schedule);
 }
