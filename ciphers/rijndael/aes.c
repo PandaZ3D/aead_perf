@@ -176,6 +176,7 @@ void MixColumns(uint32_t state[]) {
 // addition is done with XOR
 void KeyAddition(uint32_t state[], const uint32_t round_key[]) {  
   for (int c = 0; c < N_COLUMNS; c++) {
+    printf("state: %x round: %x xor: %x", state[c], round_key[c], state[c] ^ round_key[c]);
     state[c] = state[c] ^ round_key[c];
   }
 }
