@@ -198,7 +198,7 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   uint32_t tmp = 0;
 
   do {
-    key_schedule[i] = ((uint32_t *) secret_key)[i]
+    key_schedule[i] = ((uint32_t *) secret_key)[i];
     //((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
     //  | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
   } while(++i < Nk);
