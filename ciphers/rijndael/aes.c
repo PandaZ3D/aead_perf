@@ -203,7 +203,7 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
     printf("i: %d tmp: %x ", i, tmp);
     if (i % Nk == 0) {
       printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(tmp), rcon[i/Nk]);
-      tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk];
+      tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk - 1];
       printf("XOR: %x ", tmp);
     } else if (Nk > 6 && i % Nk == 4) {
       tmp = SubWord(tmp);
