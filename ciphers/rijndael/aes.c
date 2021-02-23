@@ -155,16 +155,16 @@ void MixColumns(uint32_t state[]) {
       //   multiply by special matrix in GF(2^8)
       col = state[c];
       //   s0' = ({02} AND s0) XOR ({03} AND s1) XOR s2 XOR s3
-      COLARR(state, 0) = GF_8(0x02, COLARR(col, 0)) ^ GF_8(0x03, COLARR(col, 1))
+      COLARR(state[c], 0) = GF_8(0x02, COLARR(col, 0)) ^ GF_8(0x03, COLARR(col, 1))
         ^ COLARR(col, 2) ^ COLARR(col, 3);
       //   s1' = s0 XOR ({02} AND s1) XOR ({03} AND s2) XOR s3
-      COLARR(state, 1) = (COLARR(col, 0)) ^ GF_8(0x02, COLARR(col, 1)) 
+      COLARR(state[c], 1) = (COLARR(col, 0)) ^ GF_8(0x02, COLARR(col, 1)) 
         ^ GF_8(0x03, COLARR(col, 1)) ^ COLARR(col, 3);
       //   s2' = s0 XOR s1 ({02} AND s2) XOR ({03} AND s3)
-      COLARR(state, 2) = (COLARR(col, 0)) ^ (COLARR(col, 1)) 
+      COLARR(state[c], 2) = (COLARR(col, 0)) ^ (COLARR(col, 1)) 
         ^ GF_8(0x02, COLARR(col, 2)) ^ GF_8(0x03, COLARR(col, 3));
       //   s3' = ({03} AND s0) XOR s1 XOR s2 XOR ({02} AND s3)
-      COLARR(state, 3) = GF_8(0x03, COLARR(col, 0)) ^ (COLARR(col, 1)) 
+      COLARR(state[c], 3) = GF_8(0x03, COLARR(col, 0)) ^ (COLARR(col, 1)) 
         ^ (COLARR(col, 2)) ^ GF_8(0x02, COLARR(col, 3));
   }
 }
