@@ -5,10 +5,13 @@ OBJ_DIR = $(BUILD_DIR)/objs
 LIB_DIR = $(BUILD_DIR)/lib
 HEADERS = include
 
+AR = ar
+ARFLAGS = -r -c
+
 CC = gcc
 CFLAGS = -Wall -Wpedantic -Werror -Wextra -I$(HEADERS) -g
-LDFLAGS = -L$(LIB_DIR) -laead
-# LDLIBS = 
+LDFLAGS = -L$(LIB_DIR)
+LDLIBS = -laead
 
 LIB_NAME	= libaead
 LIB_SRC 	= $(SRC_DIR)/rjindael/aes.c
@@ -26,16 +29,17 @@ build:
 	-mkdir -p $(LIB_DIR)
 
 $(LIB_DIR)/$(LIB_NAME).a: $(LIB_OBJ)
-	ar -rc $@ $^
+	$(AR) $(ARFLAGS) $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/*/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# gcc -Iinclude tests/test_aes.c -Lbuild/lib/ -laead
 test: tests/test_aes.o
-	$(CC) -o test_aes tests/test_aes.o $(LDFLAGS)
+	$(CC) -o aes_test $< $(LDFLAGS) $(LDLIBS)
 
 tests/test_aes.o: tests/test_aes.c
-	$(CC) $(CFLAGS) tests/test_aes.c
-
+	$(CC) $(CFLAGS) -c $< -o $@
+	
 clean:
 	rm -rf $(BUILD_DIR)

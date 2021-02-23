@@ -164,7 +164,7 @@ void MixColumns(uint32_t state[]) {
       COLARR(state, 2) = (COLARR(col, 0)) ^ (COLARR(col, 1)) 
         ^ GF_8(0x02, COLARR(col, 2)) ^ GF_8(0x03, COLARR(col, 3));
       //   s3' = ({03} AND s0) XOR s1 XOR s2 XOR ({02} AND s3)
-      COLARR(state, 2) = GF_8(0x03, COLARR(col, 0)) ^ (COLARR(col, 1)) 
+      COLARR(state, 3) = GF_8(0x03, COLARR(col, 0)) ^ (COLARR(col, 1)) 
         ^ (COLARR(col, 2)) ^ GF_8(0x02, COLARR(col, 3));
   }
 }
