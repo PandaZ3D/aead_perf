@@ -208,7 +208,7 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
     } else if (Nk > 6 && i % Nk == 4) {
       tmp = SubWord(tmp);
     }
-    printf("w[i-Nk]: %x ", key_schedule[i - Nk])
+    printf("w[i-Nk]: %x ", key_schedule[i - Nk]);
     key_schedule[i] = key_schedule[i - Nk] ^ tmp;
     printf("w[i]: %x\n", key_schedule[i]);
       // ((uint8_t*)key_schedule + i)[0], ((uint8_t*)key_schedule + i)[1],
