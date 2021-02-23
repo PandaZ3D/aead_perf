@@ -1,8 +1,10 @@
 # make must be run relative to root of directory
 BUILD_DIR = build
 SRC_DIR = ciphers
+TEST_DIR = tests
 OBJ_DIR = $(BUILD_DIR)/objs
 LIB_DIR = $(BUILD_DIR)/lib
+EXE_DIR = $(BUILD_DIR)/bin
 HEADERS = include
 
 AR = ar
@@ -27,19 +29,23 @@ $(LIB_NAME): build $(LIB_DIR)/$(LIB_NAME).a
 build:
 	-mkdir -p $(OBJ_DIR)
 	-mkdir -p $(LIB_DIR)
+	-mkdir -p $(EXE_DIR)
 
 $(LIB_DIR)/$(LIB_NAME).a: $(LIB_OBJ)
 	$(AR) $(ARFLAGS) $@ $^
 
+# gcc -Iinclude tests/test_aes.c -Lbuild/lib/ -laead
+test: $(OBJ_DIR)/test_aes.o
+	$(CC) -o $(EXE_DIR)/aes_test $< $(LDFLAGS) $(LDLIBS)
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/*/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# gcc -Iinclude tests/test_aes.c -Lbuild/lib/ -laead
-test: tests/test_aes.o
-	$(CC) -o aes_test $< $(LDFLAGS) $(LDLIBS)
-
-tests/test_aes.o: tests/test_aes.c
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# tests/test_aes.o: tests/test_aes.c
+# 	$(CC) $(CFLAGS) -c $< -o $@
 	
 clean:
 	rm -rf $(BUILD_DIR)

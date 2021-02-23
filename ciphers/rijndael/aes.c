@@ -105,13 +105,13 @@ static const uint8_t gf_8_mult[2][256] = {
 uint32_t SubWord(uint32_t word) {
   uint32_t sub_word = word;
   uint8_t byte, *byte_arr = (uint8_t *) &sub_word;
-  printf("SubWord: ");
+  // printf("SubWord: ");
   for (int i = 0; i < 4; i++) {
     byte = byte_arr[i];
-    printf("%x ", byte);
+    // printf("%x:%x ", byte, s_box[byte >> 4][byte & 0xF]);
     byte_arr[i] = s_box[byte >> 4][byte & 0xF];
   }
-  printf("\n");
+  // printf("\n");
   return sub_word;
 }
 
@@ -138,17 +138,17 @@ void SubBytes(uint8_t state [][4]) {
 // first row remains unchanged
 // only last three rows shifted
 void ShiftRows(uint8_t state [][4]) {
-  uint8_t tmp;
+  uint8_t tmp[N_COLUMNS];
   // for row in state
   for (int r = 1; r < N_ROWS; r++) {
-    // save first byte in row
-    tmp = MATRIX(state, r, 0);
-    // shift over next 3 bytes in row
-    for (int c = 0; c < N_COLUMNS - 1; c++) {
-      MATRIX(state, r, c) = MATRIX(state, r, (c + r) % N_COLUMNS);
+    // shift over next bytes, depending on row
+    for (int c = 0; c < N_COLUMNS; c++) {
+      tmp[c] = MATRIX(state, r, (c + r) % N_COLUMNS);
     }
-    // wrap around first byte
-    MATRIX(state, r, N_COLUMNS - 1) = tmp;
+    // copy over bytes in right order
+    for(int c = 0; c < N_COLUMNS; c++) {
+      MATRIX(state, r, c) = tmp[c];
+    }
   }
 }
 
@@ -163,7 +163,7 @@ void MixColumns(uint32_t state[]) {
         ^ COLARR(col, 2) ^ COLARR(col, 3);
       //   s1' = s0 XOR ({02} AND s1) XOR ({03} AND s2) XOR s3
       COLARR(state[c], 1) = (COLARR(col, 0)) ^ GF_8(0x02, COLARR(col, 1)) 
-        ^ GF_8(0x03, COLARR(col, 1)) ^ COLARR(col, 3);
+        ^ GF_8(0x03, COLARR(col, 2)) ^ COLARR(col, 3);
       //   s2' = s0 XOR s1 ({02} AND s2) XOR ({03} AND s3)
       COLARR(state[c], 2) = (COLARR(col, 0)) ^ (COLARR(col, 1)) 
         ^ GF_8(0x02, COLARR(col, 2)) ^ GF_8(0x03, COLARR(col, 3));
@@ -180,7 +180,7 @@ void MixColumns(uint32_t state[]) {
 // addition is done with XOR
 void KeyAddition(uint32_t state[], const uint32_t round_key[]) {  
   for (int c = 0; c < N_COLUMNS; c++) {
-    printf("state: %x round: %x xor: %x\n", state[c], round_key[c], state[c] ^ round_key[c]);
+    printf("\tstate: %x round: %x xor: %x\n", state[c], round_key[c], state[c] ^ round_key[c]);
     state[c] = state[c] ^ round_key[c];
   }
 }
@@ -198,16 +198,16 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   uint32_t tmp = 0;
 
   do {
-    key_schedule[i] = ((uint32_t *) secret_key)[i];
-    //((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
-    //  | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
+    key_schedule[i] = //((uint32_t *) secret_key)[i];
+    ((secret_key[4 * i] << 24) | (secret_key[4 * i + 1] << 16) 
+     | (secret_key[4 * i + 2] << 8) | (secret_key[4 * i + 3]));
   } while(++i < Nk);
 
   do {
     tmp = key_schedule[i-1];
     printf("i: %d tmp: %x ", i, tmp);
     if (i % Nk == 0) {
-      printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(tmp), rcon[i/Nk - 1]);
+      printf("RotWord: %x SubWord: %x Rcon: %x ", RotWord(tmp), SubWord(RotWord(tmp)), rcon[i/Nk - 1]);
       tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk - 1];
       printf("XOR: %x ", tmp);
     } else if (Nk > 6 && i % Nk == 4) {
@@ -219,14 +219,22 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
       // ((uint8_t*)key_schedule + i)[0], ((uint8_t*)key_schedule + i)[1],
       // ((uint8_t*)key_schedule + i)[2], ((uint8_t*)key_schedule + i)[3]);
   } while (++i < N_COLUMNS * (N_ROUNDS+1));
+
+  // reverse edianess for 32-bit words
+  for(i = 0; i < N_COLUMNS * (N_ROUNDS+1); i++) {
+    uint8_t * k = (uint8_t *) &key_schedule[i];
+    key_schedule[i] = (k[0] << 24) | (k[1] << 16) | (k[2] << 8) | k[3];
+    printf("w[%d]: %x\n", i, key_schedule[i]);
+  }
 } 
 
 void print_state(uint8_t m[][4]) {
   for (int c = 0; c < N_COLUMNS; c++) {
     for (int r = 0; r < N_ROWS; r++) {
-      printf("%x", MATRIX(m, r, c));
+      printf("%02x", MATRIX(m, r, c));
     }
   }
+  printf("\n");
 }
 
 // encrypts a single 128-bit block with key schedule
@@ -243,11 +251,17 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
   KeyAddition(S.col_arr, key_schedule); // add round key
 
   for (int r = 1; r < N_ROUNDS; r++) {
-    printf("round[%02d]: ", r);
-    print_state(S.matrix);
+      printf("round[%02d].start\t", r);
+      print_state(S.matrix);
     SubBytes(S.matrix);
+      printf("round[%02d].s_box\t", r);
+      print_state(S.matrix);
     ShiftRows(S.matrix);
+      printf("round[%02d].s_row\t", r);
+      print_state(S.matrix);
     MixColumns(S.col_arr);
+      printf("round[%02d].m_col\t", r);
+      print_state(S.matrix);
     KeyAddition(S.col_arr, key_schedule + (r * N_COLUMNS));
   }
 
@@ -256,6 +270,8 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
   ShiftRows(S.matrix);
   KeyAddition(S.col_arr, key_schedule + (N_ROUNDS * N_COLUMNS));
 
+  printf("round[%02d].start\t", N_ROUNDS);
+      print_state(S.matrix);
   //copy out bytes from state array
   memcpy(cipher_text, (uint8_t *) S.col_arr, BLK_BYTES);
 }
