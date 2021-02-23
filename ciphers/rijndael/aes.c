@@ -3,7 +3,7 @@
 * only implements encryption
 */
 
-#include <printf.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "aes.h"
