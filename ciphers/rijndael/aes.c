@@ -5,6 +5,8 @@
 
 #include <string.h>
 
+#include "aes.h"
+
 /* AES constants
  * Nb = 4 (numbe of 32-bit words in state)
 */
@@ -46,10 +48,16 @@ static const uint8_t s_box[16][16] = {
 	{0xE1,0xF8,0x98,0x11,0x69,0xD9,0x8E,0x94,0x9B,0x1E,0x87,0xE9,0xCE,0x55,0x28,0xDF},
 	{0x8C,0xA1,0x89,0x0D,0xBF,0xE6,0x42,0x68,0x41,0x99,0x2D,0x0F,0xB0,0x54,0xBB,0x16}
 };
-// need an efficient GF(2^8) multiply
-// could use precomputed tables
-#define GF_8(c, b) gf_8_mult[c][b]
-static const uint8_t gf_8_mult[2][256] {
+
+// only indexes are 0x02 and 0x03 since we implement
+// encryptino only. For any other coefficeitns we would need
+// fully calculated tables. An alternative and more efficient
+// method is using algo-log tables (x2 256 tables)
+#define GF_8(c, b) gf_8_mult[c ^ 0x02][b]
+
+// could use precomputed tables 
+/* first index refers to 0x02 and second refers to 0x03 */
+static const uint8_t gf_8_mult[2][256] = {
   /* multiplication by 0x02 */
   {0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C, 0x1E, 
   0x20, 0x22, 0x24, 0x26, 0x28, 0x2A, 0x2C, 0x2E, 0x30, 0x32, 0x34, 0x36, 0x38, 0x3A, 0x3C, 0x3E, 
@@ -68,7 +76,7 @@ static const uint8_t gf_8_mult[2][256] {
   0xDB, 0xD9, 0xDF, 0xDD, 0xD3, 0xD1, 0xD7, 0xD5, 0xCB, 0xC9, 0xCF, 0xCD, 0xC3, 0xC1, 0xC7, 0xC5, 
   0xFB, 0xF9, 0xFF, 0xFD, 0xF3, 0xF1, 0xF7, 0xF5, 0xEB, 0xE9, 0xEF, 0xED, 0xE3, 0xE1, 0xE7, 0xE5},
   /* multiplication by 0x03 */  
-  0x00, 0x03, 0x06, 0x05, 0x0C, 0x0F, 0x0A, 0x09, 0x18, 0x1B, 0x1E, 0x1D, 0x14, 0x17, 0x12, 0x11, 
+  {0x00, 0x03, 0x06, 0x05, 0x0C, 0x0F, 0x0A, 0x09, 0x18, 0x1B, 0x1E, 0x1D, 0x14, 0x17, 0x12, 0x11, 
   0x30, 0x33, 0x36, 0x35, 0x3C, 0x3F, 0x3A, 0x39, 0x28, 0x2B, 0x2E, 0x2D, 0x24, 0x27, 0x22, 0x21, 
   0x60, 0x63, 0x66, 0x65, 0x6C, 0x6F, 0x6A, 0x69, 0x78, 0x7B, 0x7E, 0x7D, 0x74, 0x77, 0x72, 0x71, 
   0x50, 0x53, 0x56, 0x55, 0x5C, 0x5F, 0x5A, 0x59, 0x48, 0x4B, 0x4E, 0x4D, 0x44, 0x47, 0x42, 0x41, 
@@ -125,18 +133,18 @@ void SubBytes(uint8_t state [][4]) {
 
 // first row remains unchanged
 // only last three rows shifted
-void ShiftRows(uint8_t state [][]) {
+void ShiftRows(uint8_t state [][4]) {
   uint8_t tmp;
   // for row in state
   for (int r = 1; r < N_ROWS; r++) {
     // save first byte in row
-    t = MATRIX(state, r, 0);
+    tmp = MATRIX(state, r, 0);
     // shift over next 3 bytes in row
     for (int c = 0; c < N_COLUMNS - 1; c++) {
       MATRIX(state, r, c) = MATRIX(state, r, (c + r) % N_COLUMNS);
     }
     // wrap around first byte
-    MATRIX(state, r, N_COLUMNS - 1) = t;
+    MATRIX(state, r, N_COLUMNS - 1) = tmp;
   }
 }
 
@@ -175,7 +183,7 @@ void KeyAddition(uint32_t state[], const uint32_t round_key[]) {
 /******************************************
  *             AES CRYPTO API             * 
  ******************************************/
-
+#include <stdio.h>
 /* 
  * Creates key schedule from a single 256 byte key
  * to be used in every round of encryption. In other
@@ -193,11 +201,14 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]) {
   do {
     tmp = key_schedule[i-1];
     if (i % Nk == 0) {
-      tmp = SubWord(RotWord(tmp)) ^ Rcon[i/Nk];
+      tmp = SubWord(RotWord(tmp)) ^ rcon[i/Nk];
     } else if (Nk > 6 && i % Nk == 4) {
       tmp = SubWord(tmp);
     }
-    w[i] = key_schedule[i - Nk] ^ tmp;
+    key_schedule[i] = key_schedule[i - Nk] ^ tmp;
+    printf("i: %d w: %x%x%x%x\n", i, 
+      ((uint8_t*)key_schedule)[0], ((uint8_t*)key_schedule)[1],
+      ((uint8_t*)key_schedule)[2], ((uint8_t*)key_schedule)[3]);
   } while (++i < N_COLUMNS * (N_ROUNDS+1));
 } 
 
@@ -215,18 +226,18 @@ void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uin
 
   KeyAddition(S.col_arr, key_schedule); // add round key
 
-  for (r = 1; r < N_ROUNDS; r++) {
+  for (int r = 1; r < N_ROUNDS; r++) {
     SubBytes(S.matrix);
     ShiftRows(S.matrix);
     MixColumns(S.col_arr);
-    KeyAddition(S.col_arr, key_schedule[r * N_COLUMNS]);
+    KeyAddition(S.col_arr, key_schedule + (r * N_COLUMNS));
   }
 
   // last round N_ROUNDS, no mixColumns
   SubBytes(S.matrix);
   ShiftRows(S.matrix);
-  KeyAddition(S.col_arr, key_schedule[N_ROUNDS * N_COLUMNS]);
+  KeyAddition(S.col_arr, key_schedule + (N_ROUNDS * N_COLUMNS));
 
-  //copy out bytes to state array
+  //copy out bytes from state array
   memcpy(cipher_text, (uint8_t *) S.col_arr, BLK_BYTES);
 }
