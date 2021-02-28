@@ -35,7 +35,9 @@ $(LIB_DIR)/$(LIB_NAME).a: $(LIB_OBJ)
 	$(AR) $(ARFLAGS) $@ $^
 
 # gcc -Iinclude tests/test_aes.c -Lbuild/lib/ -laead
-test: $(OBJ_DIR)/test_aes.o
+test: build aes_test
+
+aes_test: $(OBJ_DIR)/test_aes.o build $(LIB_DIR)/$(LIB_NAME).a
 	$(CC) -o $(EXE_DIR)/aes_test $< $(LDFLAGS) $(LDLIBS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/*/%.c
