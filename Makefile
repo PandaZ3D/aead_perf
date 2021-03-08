@@ -16,9 +16,8 @@ LDFLAGS = -L$(LIB_DIR)
 LDLIBS = -laead
 
 LIB_NAME	= libaead
-LIB_SRC 	= $(SRC_DIR)/rjindael/aes.c
-LIB_OBJ 	= $(LIB_SRC:$(SRC_DIR)/rjindael/%.c=$(OBJ_DIR)/%.o)
-
+LIB_SRC 	= $(foreach src, $(wildcard $(SRC_DIR)/*/*.c),$(notdir $(src)))
+LIB_OBJ 	= $(LIB_SRC:%.c=$(OBJ_DIR)/%.o)
 
 .PHONY: all clean
 
@@ -35,14 +34,19 @@ $(LIB_DIR)/$(LIB_NAME).a: $(LIB_OBJ)
 	$(AR) $(ARFLAGS) $@ $^
 
 # gcc -Iinclude tests/test_aes.c -Lbuild/lib/ -laead
-test: build aes_test
+test: build aes_test chacha20_test
 
 aes_test: $(OBJ_DIR)/test_aes.o build $(LIB_DIR)/$(LIB_NAME).a
 	$(CC) -o $(EXE_DIR)/aes_test $< $(LDFLAGS) $(LDLIBS)
 
+chacha20_test: $(OBJ_DIR)/test_chacha20.o build $(LIB_DIR)/$(LIB_NAME).a
+	$(CC) -o $(EXE_DIR)/chacha20_test $< $(LDFLAGS) $(LDLIBS)
+
+# compile lib sources
 $(OBJ_DIR)/%.o: $(SRC_DIR)/*/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# compile test sources
 $(OBJ_DIR)/%.o: $(TEST_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 	
