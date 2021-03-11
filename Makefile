@@ -10,10 +10,10 @@ AR = ar
 ARFLAGS = -r -c
 
 DEBUG_FLAGS = -Wall -Wpedantic -Werror -Wextra -g
-SIMD_FLAGS = -msse -msse2
+SIMD_FLAGS = -msse -msse2 -msse3 -msse4.1
 
 CC = gcc
-CFLAGS = $(SIMD_FLAGS) $(DEBUG_FLAGS) -I$(HEADERS)
+CFLAGS = $(SIMD_FLAGS) $(DEBUG_FLAGS) -I$(HEADERS) #-O3 makes it faster...
 LDFLAGS = -L$(LIB_DIR)
 LDLIBS = -laead
 
