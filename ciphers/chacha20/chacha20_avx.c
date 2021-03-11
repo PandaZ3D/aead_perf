@@ -214,7 +214,7 @@ void chacha20_hash_256(const __m256i x[], uint8_t y[]) {
             (_mm256_extract_epi32(z[i], 6)));
         _store_word32_le((y + off + 76), \
             (_mm256_extract_epi32(z[i], 7)));
-        off += 32;
+        off += 16;
     }
     printf("%s: vector keystream\n", __func__);
     print_vec_state(z);
@@ -343,8 +343,6 @@ void chacha20_encryption_256 (
             // print_block(keystream);
             // leftover blocks
             for(i = 0; i < bytes_left; i++) {
-                printf("%s: perform xor off=%d i=%d out=%02x\n",
-                    __func__, off, i, out[i]);
                 out[off + i] = in[off + i] ^ keystream[i];
             }
         }
@@ -418,6 +416,7 @@ int main() {
 
     printf("chacha encryption test (ptlen = %d)\n", pt_len);
     chacha20_encryption_256(pt, ct, key, nonce, counter, pt_len);
+    printf("return from encryption\n");
     for(int i = 0; i < pt_len; i++) {
         printf("%02x ", ct[i]);
         if((i+1) % 16 == 0) printf("\n");
