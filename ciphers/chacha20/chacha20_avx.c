@@ -226,68 +226,57 @@ void chacha20_hash_256(const __m256i x[], uint8_t y[]) {
 // setup function uses 128-bit vectors for the rest of the cipher
 void chacha20_expansion_256(const uint8_t key[], uint8_t input[], uint8_t output[]) {
     // construct state matrix (in little endian)
-    __attribute__((aligned(16))) \
+    __attribute__((aligned(32))) \
     uint32_t state[CHACHA20_WORDS * 2];
 
-    // initialize first state
+    // initialize both states based on 256 vector placement
     // copy in constants (sigma for 32-byte key)
     state[0] = _load_word32_le(sigma_const);
     state[1] = _load_word32_le((sigma_const + 4));
     state[2] = _load_word32_le((sigma_const + 8));
     state[3] = _load_word32_le((sigma_const + 12));
+    // second state copy
+    memcpy(state + 4, state, 16);
     // copy in key material (k0 and k1)
-    state[4] = _load_word32_le(key);
-    state[5] = _load_word32_le((key + 4));
-    state[6] = _load_word32_le((key + 8));
-    state[7] = _load_word32_le((key + 12));
-    state[8] = _load_word32_le((key + 16));
-    state[9] = _load_word32_le((key + 20));
-    state[10] = _load_word32_le((key + 24));
-    state[11] = _load_word32_le((key + 28));
+    state[8] = _load_word32_le(key);
+    state[9] = _load_word32_le((key + 4));
+    state[10] = _load_word32_le((key + 8));
+    state[11] = _load_word32_le((key + 12));
+    // second state copy
+    memcpy(state + 12, state + 8, 16);
+    state[16] = _load_word32_le((key + 16));
+    state[17] = _load_word32_le((key + 20));
+    state[18] = _load_word32_le((key + 24));
+    state[19] = _load_word32_le((key + 28));
+    // second state copy
+    memcpy(state + 20, state + 16, 16);
     // copy in input (counter || nonce)
-    state[12] = _load_word32_le(input);
-    state[13] = _load_word32_le((input + 4));
-    state[14] = _load_word32_le((input + 8));
-    state[15] = _load_word32_le((input + 12));
-
+    state[24] = _load_word32_le(input);
+    state[25] = _load_word32_le((input + 4));
+    state[26] = _load_word32_le((input + 8));
+    state[27] = _load_word32_le((input + 12));
     // copy the same state data
-    memcpy(state + 16, state, 64);
-
+    memcpy(state + 28, state + 24, 16);
     // increment counter value
     input[0] += 1; // counter is a single 32-bit value
-    // incrment same value in second state block
+    // increment same value in second state block
     state[28] += 1;
 
-    printf("%s: first block\n", __func__);
-    print_state(state, 16);
-    printf("%s: second block\n", __func__);
-    print_state(state + 16, 16);
-    // copy in constants (sigma for 32-byte key)
-    // state[16] = _load_word32_le(sigma_const);
-    // state[17] = _load_word32_le((sigma_const + 4));
-    // state[18] = _load_word32_le((sigma_const + 8));
-    // state[19] = _load_word32_le((sigma_const + 12));
-    // // copy in key material (k0 and k1)
-    // state[20] = _load_word32_le(key);
-    // state[21] = _load_word32_le((key + 4));
-    // state[22] = _load_word32_le((key + 8));
-    // state[23] = _load_word32_le((key + 12));
-    // state[24] = _load_word32_le((key + 16));
-    // state[25] = _load_word32_le((key + 20));
-    // state[26] = _load_word32_le((key + 24));
-    // state[27] = _load_word32_le((key + 28));
-    // // copy in input (counter || nonce)
-    // state[28] = _load_word32_le(input);
-    // state[29] = _load_word32_le((input + 4));
-    // state[30] = _load_word32_le((input + 8));
-    // state[31] = _load_word32_le((input + 12));
+    // printf("%s: first block\n", __func__);
+    // print_state(state, 16);
+    // printf("%s: second block\n", __func__);
+    // print_state(state + 16, 16);
 
     // load both states into 256-bit vector arrays
     __m256i state_256[4] = {
-        _mm256_loadu2_m128i((__m128i *) (state + 16), (__m128i *) state),
-        _mm256_loadu2_m128i((__m128i *) (state + 20), (__m128i *) (state + 4)),
-        _mm256_loadu2_m128i((__m128i *) (state + 24), (__m128i *) (state + 8)),
-        _mm256_loadu2_m128i((__m128i *) (state + 28), (__m128i *) (state + 12))
+        // _mm256_loadu2_m128i((__m128i *) (state + 16), (__m128i *) state),
+        // _mm256_loadu2_m128i((__m128i *) (state + 20), (__m128i *) (state + 4)),
+        // _mm256_loadu2_m128i((__m128i *) (state + 24), (__m128i *) (state + 8)),
+        // _mm256_loadu2_m128i((__m128i *) (state + 28), (__m128i *) (state + 12))
+        _mm256_load_si256((__m256i *) state),
+        _mm256_load_si256((__m256i *) (state + 8)),
+        _mm256_load_si256((__m256i *) (state + 16)),
+        _mm256_load_si256((__m256i *) (state + 24))
     };
 
     printf("%s: printing vector state\n", __func__);
