@@ -10,10 +10,10 @@ AR = ar
 ARFLAGS = -r -c
 
 DEBUG_FLAGS = -Wall -Wpedantic -Werror -Wextra -g
-SIMD_FLAGS = -msse -msse2
+SIMD_FLAGS = -msse -msse2 -msse3 -msse4.1 -mavx -mavx2
 
 CC = gcc
-CFLAGS = $(SIMD_FLAGS) $(DEBUG_FLAGS) -I$(HEADERS)
+CFLAGS = $(SIMD_FLAGS) $(DEBUG_FLAGS) -I$(HEADERS) #-O3 makes it faster...
 LDFLAGS = -L$(LIB_DIR)
 LDLIBS = -laead
 
@@ -22,10 +22,11 @@ LIB_SRC 	= $(foreach src, $(wildcard $(SRC_DIR)/*/*.c),$(notdir $(src)))
 LIB_OBJ 	= $(LIB_SRC:%.c=$(OBJ_DIR)/%.o)
 
 -include tests/Makefile
+-include bench/Makefile
 
 .PHONY: all clean
 
-all: build $(LIB_NAME) test
+all: build $(LIB_NAME) test bench
 
 $(LIB_NAME): build $(LIB_DIR)/$(LIB_NAME).a
 
