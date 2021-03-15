@@ -298,13 +298,6 @@ void chacha20_encryption_128(
 
 // #include "chacha20.h"
 
-// store word into byte array from 32-bit word
-// #define _store_word32_le(b, w) \
-//     (b[0]) = (w); \
-//     (b[1]) = (w >> 8); \
-//     (b[2]) = (w >> 16); \
-//     (b[3]) = (w >> 24);
-
 // void print_state(uint32_t state[], int words) {
 //     for(int i = 0; i < words; i++) {
 //         printf("%08x ", state[i]);
