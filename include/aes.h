@@ -27,6 +27,11 @@
 #ifndef __AES_256_H__
 #define __AES_256_H__
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* 
  * Creates key schedule from a single 256 byte key
  * to be used in every round of encryption. In other
@@ -36,5 +41,9 @@ void aes_key_expansion(const uint8_t secret_key[], uint32_t key_schedule[]);
 
 /* Encrypts a single 128-bit block with pre-computed key schedule. */
 void aes_encryption(const uint8_t plain_text[], uint8_t cipher_text[], const uint32_t key_schedule[]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

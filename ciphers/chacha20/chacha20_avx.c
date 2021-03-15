@@ -338,7 +338,7 @@ void chacha20_encryption_256 (
 }
 
 
-#define _CHACHA20_AVX_MAIN_
+// #define _CHACHA20_AVX_MAIN_
 #ifdef _CHACHA20_AVX_MAIN_
 
 #include <stdio.h>

@@ -23,6 +23,11 @@
 #ifndef __AES_256_CTR_H__
 #define __AES_256_CTR_H__
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* 
  * Encrypts an arbitray sized message which is byte aligned. Requires the key_schedule
  * to be pre-computed and a nonce to be defined. The size of the output must also match
@@ -34,5 +39,10 @@
 void aes_ctr_encryption(const uint8_t plain_text[], uint8_t cipher_text[], 
     const uint32_t key_schedule[], //const uint32_t nonce, const uint64_t iv, 
     uint8_t counter[], int pt_length);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
