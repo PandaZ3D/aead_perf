@@ -2,7 +2,7 @@ BENCH_DIR=bench/src
 BENCH_SRC=$(foreach src, $(wildcard $(BENCH_DIR)/*.c),$(notdir $(src)))
 BENCH_OBJ=$(BENCH_SRC:%.c=$(OBJ_DIR)/%.o)
 
-bench: build bench_ciphers
+bench: build $(LIB_DIR)/$(LIB_NAME).a bench_ciphers
 	-mkdir -p bench/results/data
 	-mkdir -p bench/results/fig
 

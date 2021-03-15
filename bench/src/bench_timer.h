@@ -46,6 +46,7 @@ void bench_tsc_init() {
 	bench_readtsc_end();
 }
 
+#include <stdio.h>
 uint64_t measure_time(
 	int iterations,
 	int ignore_iter, 
@@ -59,11 +60,11 @@ uint64_t measure_time(
 	for(i = 0; i < ignore_iter; i++) {
 		function(args);
 	}
-	start = get_end_time();
+	start = get_start_time();
 	do {
 		function(args);
 	} while(++i < iterations);
-	end = get_start_time();
+	end = get_end_time();
 	return (end - start) / iterations;
 }
 
