@@ -1,2 +1,4 @@
 build
 tests/*.o
+bench/inputs
+
